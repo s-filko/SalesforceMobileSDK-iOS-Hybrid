@@ -42,6 +42,8 @@ NSString *const kSyncEventType = @"sync";
 NSString *const kSyncDetail = @"detail";
 NSString *const kSyncIsGlobalStoreArg = @"isGlobalStore";
 NSString *const kSyncStoreNameArg = @"storeName";
+NSString *const kSyncRestartStoppedSoups = @"restartStoppedSyncs";
+NSString *const kSyncSystem = @"syncSystem";
 
 @implementation SFMobileSyncPlugin
 
@@ -58,6 +60,7 @@ NSString *const kSyncStoreNameArg = @"storeName";
             NSMutableDictionary* detailDict = [NSMutableDictionary dictionaryWithDictionary:[sync asDict]];
             detailDict[kSyncIsGlobalStoreArg] = [self isGlobal:args]?@YES:@NO;
             detailDict[kSyncStoreNameArg] = [self storeName:args];
+            detailDict[kSyncSystem] = args[kSyncSystem];
             NSData *detailData = [NSJSONSerialization dataWithJSONObject:detailDict
                                                                  options:0 // non-pretty printing
                                                                    error:&error];
@@ -269,6 +272,28 @@ NSString *const kSyncStoreNameArg = @"storeName";
 - (BOOL) isGlobal:(NSDictionary *)args
 {
     return args[kSyncIsGlobalStoreArg] != nil && [args[kSyncIsGlobalStoreArg] boolValue];
+}
+
+- (void) stop:(CDVInvokedUrlCommand *)command
+{
+    [self runCommand:^(NSDictionary* argsDict) {
+        [[self getSyncManagerInst:argsDict] stop];
+        [SFSDKHybridLogger d:[self class] format:@"stop"];
+        return [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
+    } command:command];
+}
+
+- (void) restart:(CDVInvokedUrlCommand *)command
+{
+    [self runCommand:^(NSDictionary* argsDict) {
+        BOOL restartStoppedSoups = [argsDict nonNullObjectForKey:kSyncRestartStoppedSoups];
+        NSError* error = nil;
+        [[self getSyncManagerInst:argsDict] restart:restartStoppedSoups updateBlock:^(SFSyncState * _Nonnull sync) {
+
+        } error:&error];
+        [SFSDKHybridLogger d:[self class] format:@"restart"];
+        return [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
+    } command:command];
 }
 
 @end
